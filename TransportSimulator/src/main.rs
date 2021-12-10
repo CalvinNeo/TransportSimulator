@@ -1,6 +1,9 @@
 
 mod roadmap;
 mod vehicle;
+mod simulator;
+mod trafficlight;
+mod runner;
 
 fn main() {
     let plain = roadmap::manhattan(3, 3);
