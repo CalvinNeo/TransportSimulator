@@ -16,15 +16,18 @@ pub struct GotoIntention {
     pub to: Location,
 }
 
-// For every vehicle in `running_vehicles`, if a vehicle is fast enough to travel through multiple roads in one tick,
-// it should also be added into other pending lists.
-// By this, we can exactly know which vehicles can pass traffic light,
-// and study interaction(like traffic jam) between those vehicles.
-// However, due to unpredictable traffic light, and vehicle interaction, vehicles may not actually present.
-// As a result, we can find some road's `pending_vehicle` is dependent on other roads.
+#[derive(Debug, Clone, Default)]
+pub struct BlockedIntention {
+    pub next: GotoIntention,
+}
+
 pub enum Intention {
     Die,
     Goto(GotoIntention),
+    Block((GotoIntention, i32)),
+    Blocked(GotoIntention),
+    // wrapped GotoIntention, arrived_time is for queueing, remain_distance in this tick round.
+    Pending((GotoIntention, f64, Distance))
 }
 
 pub trait Vehicle {
@@ -34,6 +37,7 @@ pub trait Vehicle {
     // In this tick, we can still go this much distance.
     // If we `go_distance` and `blocked_by`, then `get_left_equivalent_distance` will decrease.
     fn get_left_equivalent_distance(&self) -> Distance;
+    fn get_left_equivalent_time(&self) -> f64;
     fn go_distance(&mut self, distance: Distance);
     // Returns true if this car can endure the traffic light in current time piece.
     fn blocked_by(&mut self, delta_tso: i64) -> bool;
@@ -66,6 +70,9 @@ impl Vehicle for EndToEndCar {
     }
     fn get_left_equivalent_distance(&self) -> Distance {
         self.left_equivalent_distance
+    }
+    fn get_left_equivalent_time(&self) -> f64 {
+        self.left_equivalent_distance as f64 / self.speed as f64
     }
     fn go_distance(&mut self, distance: Distance) {
         self.running_time += distance as f64 / self.speed as f64;
